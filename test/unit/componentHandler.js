@@ -35,6 +35,25 @@ function createNestedElementsForComponentHandlerTest() {
   return container;
 }
 
+function createCheckbox(){
+  var label = document.createElement('label');
+  label.className = 'mdl-checkbox mdl-js-checkbox mdl-js-ripple-effect';
+  label.htmlFor = 'checkbox1';
+
+  var input = document.createElement('input');
+  input.setAttribute('type','checkbox');
+  input.className = 'mdl-checkbox__input';
+  input.id = 'checkbox1';
+  label.appendChild(input);
+
+  var span = document.createElement('span');
+  span.className = 'mdl-checkbox__label';
+  span.innerHTML = 'checkbox';
+  label.appendChild(span);
+
+  return label;
+}
+
 describe('componentHandler', function() {
 
   it('should be globally available', function() {
@@ -93,13 +112,13 @@ describe('componentHandler', function() {
     componentHandler.upgradeElement(el, 'MaterialButton');
     componentHandler.upgradeElement(el, 'MaterialRipple');
     expect($(el)).to.have.data('upgraded', ',MaterialButton,MaterialRipple');
-  });
+  });  
 
   it('should upgrade a single component to an element by using its CSS classes', function() {
     var el = document.createElement('button');
-    el.className = 'mdl-button mdl-js-button';
+    el.className = 'mdl-js-button mdl-js-ripple-effect';
     componentHandler.upgradeElement(el);
-    expect($(el)).to.have.data('upgraded', ',MaterialButton');
+    expect($(el)).to.have.data('upgraded', ',MaterialButton,MaterialRipple');
   });
 
   it('should upgrade the entire DOM available', function() {
@@ -114,6 +133,23 @@ describe('componentHandler', function() {
     expect($(buttonTwo)).to.have.data('upgraded', ',MaterialButton,MaterialRipple');
     document.body.removeChild(button);
     document.body.removeChild(buttonTwo);
+  });
+
+  it('should upgrade a single component to an element', function() {
+    var el = document.createElement('button');
+    el.setAttribute('data-upgraded', ',MaterialButtonPostfix');
+    el.className = 'mdl-js-button';
+    componentHandler.upgradeElement(el);
+    expect($(el)).to.have.data('upgraded', ',MaterialButtonPostfix,MaterialButton');
+  });
+
+  it('should upgrade child elements created by parent upgrade', function () {
+    var checkbox = createCheckbox();
+
+    componentHandler.upgradeElements(checkbox);
+    
+    var child = checkbox.lastChild;    
+    expect($(child)).to.have.data('upgraded', ',MaterialRipple');
   });
 
   it('should upgrade all elements and their children within an HTMLCollection', function() {
