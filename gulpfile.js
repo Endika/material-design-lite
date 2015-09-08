@@ -363,6 +363,9 @@ gulp.task('demoresources', function() {
  * put together.
  */
 gulp.task('demos', ['demoresources'], function() {
+  /**
+   * Retrieves the list of component folders.
+   */
   function getComponentFolders() {
     return fs.readdirSync('./src/')
       .filter(function(file) {
@@ -446,6 +449,9 @@ gulp.task('assets', function() {
     .pipe(gulp.dest('dist/assets'));
 });
 
+/**
+ * Defines the list of resources to watch for changes.
+ */
 function watch() {
   gulp.watch(['src/**/*.js', '!src/**/README.md'],
     ['scripts', 'demos', 'components', reload]);
@@ -493,7 +499,11 @@ gulp.task('zip:mdl', function() {
     .pipe(gulp.dest('dist'));
 });
 
-// Returns the list of children directories inside the given directory.
+/**
+ * Returns the list of children directories inside the given directory.
+ * @param {string} dir the parent directory
+ * @return {Array<string>} list of child directories
+ */
 function getSubDirectories(dir) {
   return fs.readdirSync(dir)
     .filter(function(file) {
@@ -566,8 +576,11 @@ gulp.task('publish:code', function(cb) {
     cb);
 });
 
-// Function to publish staging or prod version from local tree,
-// or to promote staging to prod, per passed arg.
+/**
+ * Function to publish staging or prod version from local tree,
+ * or to promote staging to prod, per passed arg.
+ * @param {string} pubScope the scope to publish to.
+ */
 function mdlPublish(pubScope) {
   var cacheTtl = null;
   var src = null;
