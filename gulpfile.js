@@ -35,6 +35,7 @@ var path = require('path');
 var pkg = require('./package.json');
 var through = require('through2');
 var swig = require('swig');
+var closureCompiler = require('gulp-closure-compiler');
 var hostedLibsUrlPrefix = 'https://storage.googleapis.com/code.getmdl.io';
 var templateArchivePrefix = 'mdl-template-';
 var bucketProd = 'gs://www.getmdl.io';
@@ -59,6 +60,31 @@ var AUTOPREFIXER_BROWSERS = [
   'ios >= 7',
   'android >= 4.4',
   'bb >= 10'
+];
+
+var SOURCES = [
+  // Component handler
+  'src/mdlComponentHandler.js',
+  // Polyfills/dependencies
+  'src/third_party/**/*.js',
+  // Base components
+  'src/button/button.js',
+  'src/checkbox/checkbox.js',
+  'src/icon-toggle/icon-toggle.js',
+  'src/menu/menu.js',
+  'src/progress/progress.js',
+  'src/radio/radio.js',
+  'src/slider/slider.js',
+  'src/spinner/spinner.js',
+  'src/switch/switch.js',
+  'src/tabs/tabs.js',
+  'src/textfield/textfield.js',
+  'src/tooltip/tooltip.js',
+  // Complex components (which reuse base components)
+  'src/layout/layout.js',
+  'src/data-table/data-table.js',
+  // And finally, the ripples
+  'src/ripple/ripple.js'
 ];
 
 // ***** Development tasks ****** //
@@ -192,34 +218,28 @@ gulp.task('styles-grid', function() {
     .pipe($.size({title: 'styles-grid'}));
 });
 
+// Build with Google's Closure Compiler, requires Java 1.7+ installed.
+gulp.task('closure', function() {
+  return gulp.src(SOURCES)
+    .pipe(closureCompiler({
+      compilerPath: 'node_modules/google-closure-compiler/compiler.jar',
+      fileName: 'material.closure.min.js',
+      compilerFlags: {
+        // jscs:disable closureCamelCase
+        compilation_level: 'ADVANCED_OPTIMIZATIONS',
+        language_in: 'ECMASCRIPT6_STRICT',
+        language_out: 'ECMASCRIPT5_STRICT',
+        warning_level: 'VERBOSE'
+        // jscs:enable closureCamelCase
+      }
+    }))
+    .pipe(gulp.dest('./dist'));
+});
+
 // Concatenate And Minify JavaScript
 gulp.task('scripts', ['jscs', 'jshint'], function() {
-  var sources = [
-    // Component handler
-    'src/mdlComponentHandler.js',
-    // Polyfills/dependencies
-    'src/third_party/**/*.js',
-    // Base components
-    'src/button/button.js',
-    'src/checkbox/checkbox.js',
-    'src/icon-toggle/icon-toggle.js',
-    'src/menu/menu.js',
-    'src/progress/progress.js',
-    'src/radio/radio.js',
-    'src/slider/slider.js',
-    'src/spinner/spinner.js',
-    'src/switch/switch.js',
-    'src/tabs/tabs.js',
-    'src/textfield/textfield.js',
-    'src/tooltip/tooltip.js',
-    // Complex components (which reuse base components)
-    'src/layout/layout.js',
-    'src/data-table/data-table.js',
-    // And finally, the ripples
-    'src/ripple/ripple.js'
-  ];
-  return gulp.src(sources)
-    .pipe(uniffe())
+  return gulp.src(SOURCES)
+    .pipe($.if(/mdlComponentHandler\.js/, $.util.noop(), uniffe()))
     .pipe($.sourcemaps.init())
     // Concatenate Scripts
     .pipe($.concat('material.js'))
@@ -250,20 +270,22 @@ gulp.task('metadata', function() {
 });
 
 // Build Production Files, the Default Task
-gulp.task('default', ['clean', 'mocha'], function(cb) {
+gulp.task('default', ['clean'], function(cb) {
   runSequence(
     ['styles', 'styles-grid'],
     ['scripts'],
+    ['mocha'],
     cb);
 });
 
 // Build production files and microsite
-gulp.task('all', ['clean', 'mocha'], function(cb) {
+gulp.task('all', ['clean'], function(cb) {
   runSequence(
     ['default', 'styletemplates'],
     ['styles:gen'],
     ['jshint', 'jscs', 'scripts',  'assets', 'demos', 'pages',
      'templates', 'images', 'styles-grid', 'metadata'],
+    ['mocha'],
     ['zip'],
     cb);
 });
@@ -275,7 +297,22 @@ gulp.task('mocha', ['styles'], function() {
     .pipe($.mochaPhantomjs({reporter: 'tap'}));
 });
 
-gulp.task('test', ['jshint', 'jscs', 'mocha']);
+gulp.task('mocha:closure', ['closure'], function() {
+  return gulp.src('./test/index.html')
+    .pipe($.replace('src="../dist/material.js"',
+        'src="../dist/material.closure.min.js"'))
+    .pipe($.rename('temp.html'))
+    .pipe(gulp.dest('./test'))
+    .pipe($.mochaPhantomjs({reporter: 'tap'}))
+    .on('finish', function() {
+      del('test/temp.html', {'force': true});
+    })
+    .on('error', function() {
+      del('test/temp.html', {'force': true});
+    });
+});
+
+gulp.task('test', ['jshint', 'jscs', 'mocha', 'mocha:closure']);
 
 gulp.task('test:visual', function() {
   browserSync({
