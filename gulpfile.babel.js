@@ -17,6 +17,8 @@
  *
  */
 
+ // jscs:disable jsDoc
+
 'use strict';
 
 // Include Gulp & Tools We'll Use
@@ -37,7 +39,7 @@ import pkg from './package.json';
 
 const $ = gulpLoadPlugins();
 const reload = browserSync.reload;
-const hostedLibsUrlPrefix = 'https://storage.googleapis.com/code.getmdl.io';
+const hostedLibsUrlPrefix = 'https://code.getmdl.io';
 const templateArchivePrefix = 'mdl-template-';
 const bucketProd = 'gs://www.getmdl.io';
 const bucketStaging = 'gs://mdl-staging';
@@ -275,11 +277,12 @@ gulp.task('default', ['clean'], cb => {
 // Build production files and microsite
 gulp.task('all', ['clean'], cb => {
   runSequence(
-    ['default', 'styletemplates'],
-    ['styles:gen'],
-    ['lint', 'scripts', 'assets', 'demos', 'pages',
-     'templates', 'images', 'styles-grid', 'metadata'],
+    ['styletemplates'],
+    ['styles-grid', 'styles:gen'],
+    ['scripts'],
     ['mocha'],
+    ['assets', 'pages',
+     'templates', 'images', 'metadata'],
     ['zip'],
     cb);
 });
